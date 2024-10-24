@@ -29,7 +29,17 @@ class TestCharacter(unittest.TestCase):
             self.assertEqual(player1.hp, player2.hp - i - 1)
             print(f"Test attaque passed player 1 has {player2.hp - i - 1} HP after attack")
 
-
+    def test_attaque_player1_dead(self):
+        player1 = Character("Player 1")
+        player2 = Character("Player 2")
+        player1.hp = 0
+        player2.attack(player1)
+    
+    def test_attaque_player2_dead(self):
+        player1 = Character("Player 1")
+        player2 = Character("Player 2")
+        player2.hp = 0
+        player1.attack(player2)
 
 
 if __name__ == "__main__":

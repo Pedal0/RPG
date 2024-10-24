@@ -4,7 +4,13 @@ class Character:
         self.hp = 10
 
     def attack(self, other):
-        other.hp -= 1
+        if other.hp > 0:
+
+            other.hp -= 1
+
+            if other.hp <= 0:
+
+                print(f"{other.name} is dead")
         
 def main():
     player1 = Character("Player 1")
