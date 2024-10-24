@@ -3,6 +3,9 @@ class Character:
         self.name = name
         self.hp = 10
 
+    def attack(self, other):
+        other.hp -= 1
+        
 def main():
     player1 = Character("Player 1")
     player2 = Character("Player 2")
