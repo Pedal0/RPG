@@ -3,5 +3,11 @@ class Character:
         self.name = name
         self.hp = 10
 
+def main():
+    player1 = Character("Player 1")
+    player2 = Character("Player 2")
+    player1.attack(player2)
+    print(player2.hp)
+
 if __name__ == "__main__":
     main()
