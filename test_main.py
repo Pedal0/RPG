@@ -41,6 +41,17 @@ class TestCharacter(unittest.TestCase):
         player2.hp = 0
         player1.attack(player2)
 
+    def test_dead_player1_attack(self):
+        player1 = Character("Player 1")
+        player2 = Character("Player 2")
+        player1.hp = 0
+        player1.attack(player2)
+
+    def test_dead_player2_attack(self):
+        player1 = Character("Player 1")
+        player2 = Character("Player 2")
+        player2.hp = 0
+        player2.attack(player1)
 
 if __name__ == "__main__":
     unittest.main()
