@@ -33,6 +33,5 @@ def main():
           print(f'Player 1 HP: {player1.hp}')
  
 
-
 if __name__ == "__main__":
     main()
