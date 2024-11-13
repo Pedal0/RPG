@@ -2,7 +2,7 @@ name: Python CI/CD Pipeline
 
 on:
   push:
-    branches: [ "dev" ]  # Déclenche l'action sur chaque push vers dev
+    branches: [ "dev" ]
 
 permissions:
   contents: write  # Nécessaire pour faire des pushs et des reset
@@ -38,20 +38,23 @@ jobs:
 
       - name: Set lint status
         id: set-lint-status
-        run: echo "::set-output name=status::${{ steps.lint.outcome == 'success' }}"
+        run: |
+          echo "LINT_STATUS=${{ steps.lint.outcome == 'success' }}" >> $GITHUB_ENV
 
       - name: Test with pytest
         id: test
-        run: pytest
+        run: |
+          pytest
         continue-on-error: true
 
       - name: Set test status
         id: set-test-status
-        run: echo "::set-output name=status::${{ steps.test.outcome == 'success' }}"
+        run: |
+          echo "TEST_STATUS=${{ steps.test.outcome == 'success' }}" >> $GITHUB_ENV
 
   fast-forward-master:
     needs: build-and-test
-    if: ${{ needs.build-and-test.outputs.lint_status == 'success' && needs.build-and-test.outputs.test_status == 'success' }}
+    if: ${{ env.LINT_STATUS == 'true' && env.TEST_STATUS == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -59,6 +62,7 @@ jobs:
           fetch-depth: 0
       - name: Merge dev into master if tests pass
         run: |
+          echo "Merging dev into master"
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git checkout master
@@ -67,7 +71,7 @@ jobs:
 
   handle-failure:
     needs: build-and-test
-    if: ${{ needs.build-and-test.outputs.lint_status != 'success' || needs.build-and-test.outputs.test_status != 'success' }}
+    if: ${{ env.LINT_STATUS != 'true' || env.TEST_STATUS != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -75,6 +79,7 @@ jobs:
           fetch-depth: 0  # Assure l’accès complet à l’historique de la branche
       - name: Create failure branch and reset dev
         run: |
+          echo "Creating failure branch due to test failure"
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           UNIQUE_ID=$(date +'%Y%m%d%H%M%S')
