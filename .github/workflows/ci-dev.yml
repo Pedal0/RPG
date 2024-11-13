@@ -40,7 +40,7 @@ jobs:
         id: set-lint-status
         run: |
           echo "Lint Status: ${{ steps.lint.outcome }}"
-          echo "::set-output name=status::${{ steps.lint.outcome == 'success' }}"
+          echo "LINT_STATUS=${{ steps.lint.outcome == 'success' }}" >> $GITHUB_ENV
 
       - name: Test with pytest
         id: test
@@ -52,11 +52,11 @@ jobs:
         id: set-test-status
         run: |
           echo "Test Status: ${{ steps.test.outcome }}"
-          echo "::set-output name=status::${{ steps.test.outcome == 'success' }}"
+          echo "TEST_STATUS=${{ steps.test.outcome == 'success' }}" >> $GITHUB_ENV
 
   fast-forward-master:
     needs: build-and-test
-    if: ${{ needs.build-and-test.outputs.lint_status == 'success' && needs.build-and-test.outputs.test_status == 'success' }}
+    if: ${{ needs.build-and-test.outputs.LINT_STATUS == 'true' && needs.build-and-test.outputs.TEST_STATUS == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,12 +68,12 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git checkout master
-          git merge --ff-only dev  # Effectue un fast-forward si possible
+          git merge dev  # Merge sans restriction de fast-forward
           git push origin master
 
   handle-failure:
     needs: build-and-test
-    if: ${{ needs.build-and-test.outputs.lint_status != 'success' || needs.build-and-test.outputs.test_status != 'success' }}
+    if: ${{ needs.build-and-test.outputs.LINT_STATUS != 'true' || needs.build-and-test.outputs.TEST_STATUS != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
