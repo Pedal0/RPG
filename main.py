@@ -11,7 +11,7 @@ class Character:
             if other.hp <= 0:
 
                 print(f"{other.name} is dead")
-
+print("Player 1 HP: 10")
         
 def main():
     player1 = Character("Player 1")
