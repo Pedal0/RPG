@@ -39,7 +39,8 @@ jobs:
       - name: Set lint status
         id: set-lint-status
         run: |
-          echo "LINT_STATUS=${{ steps.lint.outcome == 'success' }}" >> $GITHUB_ENV
+          echo "Lint Status: ${{ steps.lint.outcome }}"
+          echo "::set-output name=status::${{ steps.lint.outcome == 'success' }}"
 
       - name: Test with pytest
         id: test
@@ -50,11 +51,12 @@ jobs:
       - name: Set test status
         id: set-test-status
         run: |
-          echo "TEST_STATUS=${{ steps.test.outcome == 'success' }}" >> $GITHUB_ENV
+          echo "Test Status: ${{ steps.test.outcome }}"
+          echo "::set-output name=status::${{ steps.test.outcome == 'success' }}"
 
   fast-forward-master:
     needs: build-and-test
-    if: ${{ env.LINT_STATUS == 'true' && env.TEST_STATUS == 'true' }}
+    if: ${{ needs.build-and-test.outputs.lint_status == 'success' && needs.build-and-test.outputs.test_status == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +73,7 @@ jobs:
 
   handle-failure:
     needs: build-and-test
-    if: ${{ env.LINT_STATUS != 'true' || env.TEST_STATUS != 'true' }}
+    if: ${{ needs.build-and-test.outputs.lint_status != 'success' || needs.build-and-test.outputs.test_status != 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
