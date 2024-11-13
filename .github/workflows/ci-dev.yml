@@ -16,7 +16,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
-          python-version: 'latest'  # Adjust to your required Python version
+          python-version: '3.x'  # Adjust to your required Python version
 
       - name: Install dependencies
         run: |
@@ -24,6 +24,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run tests
+        id: run-tests
         run: |
           pytest  # Adjust this command based on your testing framework
         continue-on-error: true  # Allow failure for custom branch creation
@@ -32,7 +33,7 @@ jobs:
         id: check-test
         run: |
           if [ $? -eq 0 ]; then
-            echo "Tests passed. Preparing to merge dev into master."
+            echo "Tests passed. Preparing to merge dev into main."
             echo "::set-output name=tests_passed::true"
           else
             echo "Tests failed. Creating a new branch with today's date."
@@ -41,15 +42,21 @@ jobs:
             git checkout -b $BRANCH_NAME
             git push origin $BRANCH_NAME
           fi
+        shell: bash
 
   merge:
     needs: test
     runs-on: ubuntu-latest
-    if: steps.check-test.outputs.tests_passed == 'true'
+    if: needs.test.outputs.check-test.tests_passed == 'true'
 
     steps:
-      - name: Checkout and merge
+      - name: Check out repository
+        uses: actions/checkout@v2
+
+      - name: Merge dev into main
         run: |
-          git checkout master
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git checkout main
           git merge dev
-          git push origin master
+          git push origin main
