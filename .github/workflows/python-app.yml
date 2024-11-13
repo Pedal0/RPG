@@ -10,6 +10,9 @@ permissions:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    outputs:
+      lint_status: ${{ steps.set-lint-status.outputs.status }}
+      test_status: ${{ steps.set-test-status.outputs.status }}
     steps:
       - uses: actions/checkout@v4
       
@@ -30,19 +33,23 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
         continue-on-error: true  # Permet au workflow de continuer même en cas d'erreur de linting
+
       - name: Set lint status
-        run: echo "LINT_STATUS=$?" >> $GITHUB_ENV  # Stocke le statut de flake8 (0 = succès, 1 = échec)
+        id: set-lint-status
+        run: echo "::set-output name=status::${{ steps.lint.outcome == 'success' }}"
 
       - name: Test with pytest
         id: test
         run: pytest
         continue-on-error: true  # Permet au workflow de continuer même en cas d'échec des tests
+
       - name: Set test status
-        run: echo "TEST_STATUS=$?" >> $GITHUB_ENV  # Stocke le statut de pytest (0 = succès, 1 = échec)
+        id: set-test-status
+        run: echo "::set-output name=status::${{ steps.test.outcome == 'success' }}"
 
   fast-forward-master:
     needs: build-and-test
-    if: env.LINT_STATUS == '0' && env.TEST_STATUS == '0'  # Ne se déclenche que si flake8 et pytest réussissent
+    if: ${{ needs.build-and-test.outputs.lint_status == 'success' && needs.build-and-test.outputs.test_status == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -56,7 +63,7 @@ jobs:
 
   handle-failure:
     needs: build-and-test
-    if: env.LINT_STATUS != '0' || env.TEST_STATUS != '0'  # Se déclenche si flake8 ou pytest échoue
+    if: ${{ needs.build-and-test.outputs.lint_status != 'success' || needs.build-and-test.outputs.test_status != 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
