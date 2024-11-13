@@ -12,7 +12,7 @@ class Character:
 
                 print(f"{other.name} is dead")
 print('test')
-print('test2')
+
         
 def main():
     player1 = Character("Player 1")
