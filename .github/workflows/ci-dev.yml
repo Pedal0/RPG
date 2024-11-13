@@ -33,7 +33,7 @@ jobs:
         id: check-test
         run: |
           if [ $? -eq 0 ]; then
-            echo "Tests passed. Preparing to merge dev into main."
+            echo "Tests passed. Preparing to merge dev into master."
             echo "::set-output name=tests_passed::true"
           else
             echo "Tests failed. Creating a new branch with today's date."
@@ -57,6 +57,6 @@ jobs:
         run: |
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
-          git checkout main
+          git checkout master
           git merge dev
-          git push origin main
+          git push origin master
