@@ -12,7 +12,7 @@ class Character:
 
                 print(f"{other.name} is dead")
 print('test')
-        
+print('deuxieme test')      
 def main():
     player1 = Character("Player 1")
     player2 = Character("Player 2")
