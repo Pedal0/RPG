@@ -1,62 +1,84 @@
-name: CI for Dev Branch
+name: Python CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - dev
+    branches: [ "dev" ]  # Déclenche l'action sur chaque push vers dev
+
+permissions:
+  contents: write  # Nécessaire pour faire des pushs et des reset
 
 jobs:
-  test:
+  build-and-test:
     runs-on: ubuntu-latest
-
+    outputs:
+      lint_status: ${{ steps.set-lint-status.outputs.status }}
+      test_status: ${{ steps.set-test-status.outputs.status }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
         with:
-          python-version: '3.x'  # Adjust to your required Python version
+          fetch-depth: 0  # Récupère tout l’historique pour permettre l’accès aux commits précédents
+      
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v3
+        with:
+          python-version: "3.10"
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install flake8 pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      - name: Run tests
-        id: run-tests
+      - name: Lint with flake8
+        id: lint
         run: |
-          pytest  # Adjust this command based on your testing framework
-        continue-on-error: true  # Allow failure for custom branch creation
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true
 
-      - name: Check test results and handle branches
-        id: check-test
-        run: |
-          if [ $? -eq 0 ]; then
-            echo "Tests passed. Preparing to merge dev into master."
-            echo "::set-output name=tests_passed::true"
-          else
-            echo "Tests failed. Creating a new branch with today's date."
-            echo "::set-output name=tests_passed::false"
-            BRANCH_NAME="failed-tests-$(date +%Y%m%d)"
-            git checkout -b $BRANCH_NAME
-            git push origin $BRANCH_NAME
-          fi
-        shell: bash
+      - name: Set lint status
+        id: set-lint-status
+        run: echo "::set-output name=status::${{ steps.lint.outcome == 'success' }}"
 
-  merge:
-    needs: test
+      - name: Test with pytest
+        id: test
+        run: pytest
+        continue-on-error: true
+
+      - name: Set test status
+        id: set-test-status
+        run: echo "::set-output name=status::${{ steps.test.outcome == 'success' }}"
+
+  fast-forward-master:
+    needs: build-and-test
+    if: ${{ needs.build-and-test.outputs.lint_status == 'success' && needs.build-and-test.outputs.test_status == 'success' }}
     runs-on: ubuntu-latest
-    if: needs.test.outputs.check-test.tests_passed == 'true'
-
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v2
-
-      - name: Merge dev into main
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge dev into master if tests pass
         run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git checkout master
-          git merge dev
+          git merge --ff-only dev  # Effectue un fast-forward si possible
           git push origin master
+
+  handle-failure:
+    needs: build-and-test
+    if: ${{ needs.build-and-test.outputs.lint_status != 'success' || needs.build-and-test.outputs.test_status != 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Assure l’accès complet à l’historique de la branche
+      - name: Create failure branch and reset dev
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          UNIQUE_ID=$(date +'%Y%m%d%H%M%S')
+          git branch failures/$UNIQUE_ID dev  # Crée une nouvelle branche de failure
+          git reset --hard HEAD~1  # Annule le dernier commit de dev
+          git push origin failures/$UNIQUE_ID  # Pousse la branche de failure
+          git push origin dev --force  # Forcer la mise à jour de dev après avoir enlevé le commit fautif
