@@ -17,14 +17,14 @@ jobs:
       lint_status: ${{ steps.set-lint-status.outputs.status }}
       test_status: ${{ steps.set-test-status.outputs.status }}
     steps:
-      - uses: actions/checkout@v4.2.0  # Version précise pour assurer la stabilité
+      - uses: actions/checkout@v4.2.0
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v4.2.0  # Version récente explicite
+        uses: actions/setup-python@v4.2.0
         with:
-          python-version: "3.11"  # Dernière version stable explicitement spécifiée
+          python-version: "3.11.5"
 
       - name: Install dependencies
         run: |
@@ -41,7 +41,12 @@ jobs:
 
       - name: Set lint status
         id: set-lint-status
-        run: echo "LINT_STATUS=${{ steps.lint.outcome == 'success' }}" >> $GITHUB_ENV
+        run: |
+          if [[ "${{ steps.lint.outcome }}" == "success" ]]; then
+            echo "status=true" >> $GITHUB_OUTPUT
+          else
+            echo "status=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Test with pytest
         id: test
@@ -50,7 +55,12 @@ jobs:
 
       - name: Set test status
         id: set-test-status
-        run: echo "TEST_STATUS=${{ steps.test.outcome == 'success' }}" >> $GITHUB_ENV
+        run: |
+          if [[ "${{ steps.test.outcome }}" == "success" ]]; then
+            echo "status=true" >> $GITHUB_OUTPUT
+          else
+            echo "status=false" >> $GITHUB_OUTPUT
+          fi
 
   fast-forward-master:
     needs: build-and-test
