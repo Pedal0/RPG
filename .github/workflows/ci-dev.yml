@@ -4,8 +4,11 @@ on:
   push:
     branches: [ "dev" ]
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
+
 permissions:
-  contents: write  # Nécessaire pour faire des pushs et des reset
+  contents: write
 
 jobs:
   build-and-test:
@@ -16,12 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Récupère tout l’historique pour permettre l’accès aux commits précédents
-      
-      - name: Set up Python 3.10
+          fetch-depth: 0
+
+      - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: "3.10"
+          python-version: "latest"
 
       - name: Install dependencies
         run: |
@@ -38,25 +41,20 @@ jobs:
 
       - name: Set lint status
         id: set-lint-status
-        run: |
-          echo "Lint Status: ${{ steps.lint.outcome }}"
-          echo "LINT_STATUS=${{ steps.lint.outcome == 'success' }}" >> $GITHUB_ENV
+        run: echo "LINT_STATUS=${{ steps.lint.outcome == 'success' }}" >> $GITHUB_ENV
 
       - name: Test with pytest
         id: test
-        run: |
-          pytest
+        run: pytest
         continue-on-error: true
 
       - name: Set test status
         id: set-test-status
-        run: |
-          echo "Test Status: ${{ steps.test.outcome }}"
-          echo "TEST_STATUS=${{ steps.test.outcome == 'success' }}" >> $GITHUB_ENV
+        run: echo "TEST_STATUS=${{ steps.test.outcome == 'success' }}" >> $GITHUB_ENV
 
   fast-forward-master:
     needs: build-and-test
-    if: ${{ needs.build-and-test.outputs.LINT_STATUS == 'true' && needs.build-and-test.outputs.TEST_STATUS == 'true' }}
+    if: ${{ needs.build-and-test.outputs.lint_status == 'true' && needs.build-and-test.outputs.test_status == 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -68,24 +66,24 @@ jobs:
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git checkout master
-          git merge dev  # Merge sans restriction de fast-forward
+          git merge dev
           git push origin master
 
   handle-failure:
     needs: build-and-test
-    if: ${{ needs.build-and-test.outputs.LINT_STATUS != 'true' || needs.build-and-test.outputs.TEST_STATUS != 'true' }}
+    if: ${{ needs.build-and-test.outputs.lint_status != 'true' || needs.build-and-test.outputs.test_status != 'true' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Assure l’accès complet à l’historique de la branche
+          fetch-depth: 0
       - name: Create failure branch and reset dev
         run: |
           echo "Creating failure branch due to test failure"
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           UNIQUE_ID=$(date +'%Y%m%d%H%M%S')
-          git branch failures/$UNIQUE_ID dev  # Crée une nouvelle branche de failure
-          git reset --hard HEAD~1  # Annule le dernier commit de dev
-          git push origin failures/$UNIQUE_ID  # Pousse la branche de failure
-          git push origin dev --force  # Forcer la mise à jour de dev après avoir enlevé le commit fautif
+          git branch failures/$UNIQUE_ID dev
+          git reset --hard HEAD~1
+          git push origin failures/$UNIQUE_ID
+          git push origin dev --force
