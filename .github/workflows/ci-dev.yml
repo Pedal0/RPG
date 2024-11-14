@@ -1,0 +1,99 @@
+name: Python CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "dev" ]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE20: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    outputs:
+      lint_status: ${{ steps.set-lint-status.outputs.status }}
+      test_status: ${{ steps.set-test-status.outputs.status }}
+    steps:
+      - uses: actions/checkout@v4.2.0
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4.2.0
+        with:
+          python-version: "3.11.5"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flake8 pytest
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Lint with flake8
+        id: lint
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        continue-on-error: true
+
+      - name: Set lint status
+        id: set-lint-status
+        run: |
+          if [[ "${{ steps.lint.outcome }}" == "success" ]]; then
+            echo "status=true" >> $GITHUB_OUTPUT
+          else
+            echo "status=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Test with pytest
+        id: test
+        run: pytest
+        continue-on-error: true
+
+      - name: Set test status
+        id: set-test-status
+        run: |
+          if [[ "${{ steps.test.outcome }}" == "success" ]]; then
+            echo "status=true" >> $GITHUB_OUTPUT
+          else
+            echo "status=false" >> $GITHUB_OUTPUT
+          fi
+
+  fast-forward-master:
+    needs: build-and-test
+    if: ${{ needs.build-and-test.outputs.lint_status == 'true' && needs.build-and-test.outputs.test_status == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.0
+        with:
+          fetch-depth: 0
+      - name: Merge dev into master if tests pass
+        run: |
+          echo "Merging dev into master"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout master
+          git merge dev
+          git push origin master
+
+  handle-failure:
+    needs: build-and-test
+    if: ${{ needs.build-and-test.outputs.lint_status != 'true' || needs.build-and-test.outputs.test_status != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4.2.0
+        with:
+          fetch-depth: 0
+      - name: Create failure branch and reset dev
+        run: |
+          echo "Creating failure branch due to test failure"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          UNIQUE_ID=$(date +'%Y%m%d%H%M%S')
+          git branch failures/$UNIQUE_ID dev
+          git reset --hard HEAD~1
+          git push origin failures/$UNIQUE_ID
+          git push origin dev --force
