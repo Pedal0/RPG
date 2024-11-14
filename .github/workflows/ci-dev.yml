@@ -17,12 +17,12 @@ jobs:
       lint_status: ${{ steps.set-lint-status.outputs.status }}
       test_status: ${{ steps.set-test-status.outputs.status }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.0  # Version précise pour assurer la stabilité
         with:
           fetch-depth: 0
 
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v4.2.0  # Version récente explicite
         with:
           python-version: "3.11"  # Dernière version stable explicitement spécifiée
 
@@ -57,7 +57,7 @@ jobs:
     if: ${{ needs.build-and-test.outputs.lint_status == 'true' && needs.build-and-test.outputs.test_status == 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.0
         with:
           fetch-depth: 0
       - name: Merge dev into master if tests pass
@@ -74,7 +74,7 @@ jobs:
     if: ${{ needs.build-and-test.outputs.lint_status != 'true' || needs.build-and-test.outputs.test_status != 'true' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4.2.0
         with:
           fetch-depth: 0
       - name: Create failure branch and reset dev
