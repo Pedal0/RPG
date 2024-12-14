@@ -22,7 +22,7 @@ class TestCharacter(unittest.TestCase):
     #     self.assertEqual(player2.name, "Player 2")
     #     self.assertEqual(player1.hp, 10)
     #     self.assertEqual(player2.hp, 5)
-    #     print("Test init passed 2 players with 10 HP each"
+    #     print("Test init passed 2 players with 10 HP each")
     #     print("A enlever pourt commit video")
 
 
