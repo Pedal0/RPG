@@ -1,9 +1,10 @@
 import unittest
 from unittest.mock import patch
-from main import Character
+from Character import Character
 from main import main
 
 class TestCharacter(unittest.TestCase):
+
     def test_init(self):
         player1 = Character("Player 1")
         player2 = Character("Player 2")
@@ -24,8 +25,6 @@ class TestCharacter(unittest.TestCase):
     #     print("Test init passed 2 players with 10 HP each"
     #     print("A enlever pourt commit video")
 
-
-    # print("hello world")
 
 if __name__ == "__main__":
     unittest.main()
